@@ -11,7 +11,7 @@ on:
 jobs:
   Deploy-to-org-environment:
     runs-on: ubuntu-latest
-    environment: orgfarm-8bf35803e5-dev-ed
+    environment: growbiz3-dev-ed
 
     steps:
       - name: Checkout source code
@@ -19,19 +19,13 @@ jobs:
         with:
           fetch-depth: 2
 
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+
       - name: Install Salesforce CLI
         run: npm install -g @salesforce/cli
-
-      - name: Install sfdx-git-delta plugin
-        run: |
-          echo "Y" | sfdx plugins:install sfdx-git-delta
-          sfdx plugins
-
-      - name: Create delta packages
-        run: |
-          mkdir -p changed-sources
-          sf sgd source delta --to "HEAD" --from "HEAD~1" --output changed-sources --generate-delta --source force-app/
-          echo "[INFO] Diff generated"
 
       - name: Authenticate with Salesforce
         run: |
@@ -41,11 +35,13 @@ jobs:
             --client-id "${{ secrets.CONSUMER_KEY }}" \
             --instance-url "${{ vars.INSTANCE_URL }}" \
             --set-default
+          rm server.key
 
-      - name: Run all test classes
-        run: |
-           sf apex run test --synchronous --wait 60 --result-format human --code-coverage
-          
-      - name: Deploy to Salesforce
-        run: |
-          sf project deploy start --source-dir changed-sources --test-level NoTestRun
+      - name: Build, Test & Deploy
+        uses: gfarb/sfdx-deploy@v1
+        env:
+          TARGET_USERNAME: ${{ secrets.DEPLOYMENT_USER_NAME }}
+          SOURCE_PATH: force-app
+          DESTRUCTIVE_CHANGES: destructive-changes  # if you have destructive changes
+          TEST_LEVEL: RunLocalTests
+          WAIT: 60
