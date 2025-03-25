@@ -41,7 +41,11 @@ jobs:
             --client-id "${{ secrets.CONSUMER_KEY }}" \
             --instance-url "${{ vars.INSTANCE_URL }}" \
             --set-default
-          
-      - name: Deploy to Salesforce with Tests
+
+      - name: Run all test classes
         run: |
-          sf project deploy start --source-dir force-app/main/default/classes/DeleteData.cls --test-level RunSpecifiedTests --tests DeleteDataTest
+           sf apex run test --synchronous --wait 60 --result-format human --code-coverage
+          
+      - name: Deploy to Salesforce
+        run: |
+          sf project deploy start --source-dir changed-sources --test-level NoTestRun
