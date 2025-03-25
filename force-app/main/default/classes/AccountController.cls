@@ -1,3 +1,10 @@
+/**
+ * @description       : 
+ * @author            : Sahil
+ * @group             : 
+ * @last modified on  : 03-25-2025
+ * @last modified by  : Sahil
+**/
 public with sharing class AccountController {
     @AuraEnabled(cacheable=true)
     public static List<String> getAccountFields() {
@@ -9,7 +16,7 @@ public with sharing class AccountController {
             fieldsList.add(fieldName);
         }
         return fieldsList;
-    }
+    } 
 
     @AuraEnabled(cacheable=true)
     public static List<Account> getAccountRecords(List<String> fieldNames) {
