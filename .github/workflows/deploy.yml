@@ -10,33 +10,38 @@ on:
 
 jobs:
   Deploy-to-org-environment:
-      runs-on: ubuntu-latest
-      environment: orgfarm-8bf35803e5-dev-ed
-      steps:
-          - uses: actions/setup-node@v3
-            with:
-              node-version: '18'
-          - name: 'Checkout source code'
-            uses: actions/checkout@v3
-            with:
-              fetch-depth: '2'
-                
-          # Now Install Salesforce CLI
-          - name: 'Install sfdx'
-            run: npm install @salesforce/cli --global
-          - name: 'Installing sfdx git delta'
-            run: | 
-                echo Y | sfdx plugins:install sfdx-git-delta
-                sfdx plugins
+    runs-on: ubuntu-latest
+    environment: orgfarm-8bf35803e5-dev-ed
 
-          - name: 'Create delta packages'
-            run: | 
-                mkdir changed-sources
-                sf sgd source delta --to "HEAD" --from "HEAD~1" --output changed-sources/ --generate-delta --source force-app/
-                echo "[INFO] Diff generated"
-                
-          - name: 'Deploy to environment with running all local tests'
-            run: |
-                echo "${{ secrets.JWT_SERVER_KEY }}" > server.key
-                sf org login jwt --username ${{ secrets.DEPLOYMENT_USER_NAME }} --jwt-key-file server.key --client-id ${{ secrets.CONSUMER_KEY }} --instance-url ${{ vars.INSTANCE_URL }} --set-default
-                sf project deploy start --source-dir changed-sources/force-app
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 2
+
+      - name: Install Salesforce CLI
+        run: npm install -g @salesforce/cli
+
+      - name: Install sfdx-git-delta plugin
+        run: |
+          echo "Y" | sfdx plugins:install sfdx-git-delta
+          sfdx plugins
+
+      - name: Create delta packages
+        run: |
+          mkdir -p changed-sources
+          sf sgd source delta --to "HEAD" --from "HEAD~1" --output changed-sources --generate-delta --source force-app/
+          echo "[INFO] Diff generated"
+
+      - name: Authenticate with Salesforce
+        run: |
+          echo "${{ secrets.JWT_SERVER_KEY }}" | base64 --decode > server.key
+          sf org login jwt --username "${{ secrets.DEPLOYMENT_USER_NAME }}" \
+            --jwt-key-file server.key \
+            --client-id "${{ secrets.CONSUMER_KEY }}" \
+            --instance-url "${{ vars.INSTANCE_URL }}" \
+            --set-default
+
+      - name: Deploy to Salesforce with Tests
+        run: |
+          sf project deploy start --source-dir changed-sources --test-level RunLocalTests
