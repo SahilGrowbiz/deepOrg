@@ -11,7 +11,7 @@ on:
 jobs:
   Deploy-to-org-environment:
     runs-on: ubuntu-latest
-    environment: growbiz3-dev-ed
+    environment: orgfarm-8bf35803e5-dev-ed
 
     steps:
       - name: Checkout source code
@@ -37,11 +37,33 @@ jobs:
             --set-default
           rm server.key
 
-      - name: Build, Test & Deploy
-        uses: gfarb/sfdx-deploy@v1
-        env:
-          TARGET_USERNAME: ${{ secrets.DEPLOYMENT_USER_NAME }}
-          SOURCE_PATH: force-app
-          DESTRUCTIVE_CHANGES: destructive-changes  # if you have destructive changes
-          TEST_LEVEL: RunLocalTests
-          WAIT: 60
+      - name: Convert and Deploy Source
+        run: |
+          # Convert source to metadata format
+          sf project convert source -d mdapiout -r force-app
+          
+          # Deploy with test execution
+          sf project deploy start \
+            -d mdapiout \
+            --target-org ${{ secrets.DEPLOYMENT_USER_NAME }} \
+            --test-level RunLocalTests \
+            --wait 60
+          
+          # Check for and deploy destructive changes if they exist
+          if [ -d "destructive-changes" ]; then
+            if [ -f "destructive-changes/destructiveChangesPre.xml" ]; then
+              sf project deploy start \
+                -x destructive-changes/destructiveChangesPre.xml \
+                --target-org ${{ secrets.DEPLOYMENT_USER_NAME }} \
+                --test-level NoTestRun \
+                --wait 60
+            fi
+            
+            if [ -f "destructive-changes/destructiveChangesPost.xml" ]; then
+              sf project deploy start \
+                -x destructive-changes/destructiveChangesPost.xml \
+                --target-org ${{ secrets.DEPLOYMENT_USER_NAME }} \
+                --test-level NoTestRun \
+                --wait 60
+            fi
+          fi
