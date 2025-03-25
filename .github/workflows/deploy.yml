@@ -44,4 +44,4 @@ jobs:
           
       - name: Deploy to Salesforce with Tests
         run: |
-          sf project deploy start --source-dir changed-sources/force-app/classes/DeleteData.cls --test-level RunSpecifiedTests --tests DeleteDataTest
+          sf project deploy start --source-dir force-app/main/default/classes/DeleteData.cls --test-level RunSpecifiedTests --tests DeleteDataTest
